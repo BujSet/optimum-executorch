@@ -35,6 +35,7 @@ _import_structure = {
     ],
     "recipes": [
         "xnnpack",
+        "portable",
     ],
     "utils": [
         "save_config_to_constant_methods",
