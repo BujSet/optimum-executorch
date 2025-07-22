@@ -1,24 +1,17 @@
-#import logging
-#import os
-#import subprocess
-#import tempfile
-#import unittest
-
-#import pytest
-#from datasets import load_dataset
 from executorch import version
 from executorch.backends.arm.ethosu_partitioner import EthosUPartitioner
 from executorch.backends.arm.arm_backend import ArmCompileSpecBuilder
 from executorch.exir.backend.backend_api import to_backend
 from executorch.extension.export_util.utils import save_pte_program
-#from executorch.extension.pybindings.portable_lib import ExecuTorchModule
-#from packaging.version import parse
-#from transformers import AutoProcessor, AutoTokenizer
-#from transformers.testing_utils import slow
-
-#from optimum.executorch import ExecuTorchModelForSpeechSeq2Seq
-#from optimum.utils.import_utils import is_transformers_version
 from optimum.exporters.executorch.tasks.asr import load_seq2seq_speech_model
+from executorch.exir import (
+    EdgeCompileConfig,
+    ExecutorchBackendConfig,
+    to_edge_transform_and_lower,
+)
+
+# Requires this command to be run from the executorch repo before this script can be run:
+# ./examples/arm/setup.sh --i-agree-to-the-contained-eula  --target-toolchain zephyr
 
 speech_model = load_seq2seq_speech_model("openai/whisper-tiny")
 exports = speech_model.export()
@@ -32,5 +25,18 @@ encoder_ethosU = to_backend(
     exports["encoder"],
     EthosUPartitioner(compile_spec)
     )
-
-save_pte_program(encoder_ethosU, "whisper_tiny_encoder_ethos_u55_128.pte")
+exec_prog = encoder_ethosU.to_executorch(
+            config=ExecutorchBackendConfig(extract_delegate_segments=False)
+)
+save_pte_program(exec_prog, "whisper_tiny_encoder_ethos_u55_128.pte")
+#edge = to_edge_transform_and_lower(
+#    exports["encoder"],
+#    partitioner=[EthosUPartitioner(compile_spec)],
+#    compile_config=EdgeCompileConfig(
+#            _check_ir_validity=False,
+#    ),
+#)
+#exec_prog = edge.to_executorch(
+#            config=ExecutorchBackendConfig(extract_delegate_segments=False)
+#)
+#save_pte_program(exec_prog, "whisper_tiny_encoder_ethos_u55_128.pte")
